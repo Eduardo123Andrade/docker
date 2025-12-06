@@ -22,3 +22,10 @@
 # docker exec -(iterative) docker-id output (bash)
 
 
+# create tag to image and prepare to push to remote repository
+# docker tag widget-server:v1 lordestark/widget-server:v1
+# docker tag tag-local repositorio remoto
+
+# docker push lordestark/widget-server:v1 -> push the image to this repository
+
+# docker pull lordestark/widget-server:v1 -> pull the image from this repository
