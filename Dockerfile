@@ -29,7 +29,11 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 # this step is get a lower node image.  Just with the necessary node dependencies
-FROM node:20-alpine3.21 AS deploy
+# FROM node:20-alpine3.21 AS deploy
+
+# the default repository is the docker hub
+# if I can user another repository I have to pass all repo URL
+FROM gcr.io/distroless/nodejs20-debian12 AS deploy
 
 # Use the first user without root access
 USER 1000 
@@ -55,7 +59,7 @@ EXPOSE 3333
 # with CMD we can infer something in command line 
 
 # this layer is write and read 
-CMD [ "node", "dist/server.mjs" ]
+CMD [ "dist/server.mjs" ]
 
 # this isn't common usage
 # ENTRYPOINT [ "executable" ] ["node", "dist/server.mjs"]
