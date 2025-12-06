@@ -31,6 +31,9 @@ RUN pnpm prune --prod
 # this step is get a lower node image.  Just with the necessary node dependencies
 FROM node:20-alpine3.21 AS deploy
 
+# Use the first user without root access
+USER 1000 
+
 WORKDIR /usr/src/app
 
 COPY --from=build /usr/src/app/dist ./dist
@@ -66,25 +69,5 @@ CMD [ "node", "dist/server.mjs" ]
 # to do a specific thing 
 
 # ex: use a large image size to build the application and a low image size to deploy this application
-
-
-# inside the terminal
-
-# command to create a new docker image
-# docker build -t widget-server:v1  . 
-# docker build -t image-name local where the Dockerfile stay   
-
-# docker logs 13d0c35aa945   
-# docker logs container-id
-
-
-# docker stop 13d0c35aa945 
-# docker stop docker-id
-
-# docker start 13d0c35aa945  -> this command is when the image already exists
-# docker start docker-id
-
-# docker run -p local-port:docker-port image name
-# docker run -p 3000:3333 widget-server:v1   
 
 
