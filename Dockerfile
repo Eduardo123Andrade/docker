@@ -29,11 +29,11 @@ RUN pnpm build
 RUN pnpm prune --prod
 
 # this step is get a lower node image.  Just with the necessary node dependencies
-# FROM node:20-alpine3.21 AS deploy
+FROM node:20-alpine3.21 AS deploy
 
 # the default repository is the docker hub
 # if I can user another repository I have to pass all repo URL
-FROM gcr.io/distroless/nodejs20-debian12 AS deploy
+# FROM gcr.io/distroless/nodejs20-debian12 AS deploy
 
 # Use the first user without root access
 USER 1000 
@@ -44,11 +44,14 @@ COPY --from=build /usr/src/app/dist ./dist
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/package.json ./package.json
 
-ENV CLOUDFLARE_ACCESS_KEY_ID="#"
-ENV CLOUDFLARE_SECRET_ACCESS_KEY="#"
-ENV CLOUDFLARE_BUCKET="#"
-ENV CLOUDFLARE_ACCOUNT_ID="#"
-ENV CLOUDFLARE_PUBLIC_URL="http://localhost"
+
+
+# ARG ENV_VAR = VALUE -> Variable used on deploy step. this var doesn't exists on run time
+# ENV CLOUDFLARE_ACCESS_KEY_ID="#" -> Variable used on run time
+# ENV CLOUDFLARE_SECRET_ACCESS_KEY="#"
+# ENV CLOUDFLARE_BUCKET="#"
+# ENV CLOUDFLARE_ACCOUNT_ID="#"
+# ENV CLOUDFLARE_PUBLIC_URL="http://localhost"
 
 EXPOSE 3333
 
