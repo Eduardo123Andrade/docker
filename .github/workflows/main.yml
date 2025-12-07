@@ -29,12 +29,25 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Generate tag
+        id: generate-tag
+        # GITHUB_SHA -> environment variable default on github action to receive the hash commit who exec the action
+        # | -> get the hash and pass to another function
+        # head -c7 -> get the first 7 characters
+        # SHA -> variable created to receive the value from "(echo $GITHUB_SHA | head -c7)" operation
+        # GITHUB_OUTPUT -> variable to retrieve with step's output
+        # echo -> create key value data
+        # echo -> get the data from (sha=SHA) and send to GITHUB_OUTPUT
+        run: |
+          SHA=$(echo $GITHUB_SHA | head -c7)
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
+
       - name: Build and push the image to AWS ECR
         id: build-push-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ steps.generate-tag.outputs.sha }}
         run: |
-          docker build -t widget-server:v3 ./
-          docker tag widget-server:v3 $ECR_REGISTRY/$ECR_REPOSITORY:v3
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:v3
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
