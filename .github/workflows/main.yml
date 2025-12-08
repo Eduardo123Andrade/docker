@@ -43,6 +43,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Set up Docker Buildx
+        id: set-up-docker-buildx
+        uses: docker/setup-buildx-action@v3        
+
       - name: Generate tag
         id: generate-tag
         # GITHUB_SHA -> environment variable default on github action to receive the hash commit who exec the action
@@ -57,11 +61,14 @@ jobs:
           echo "sha=$SHA" >> $GITHUB_OUTPUT
 
 
+        # This step is only to build the image to use the scanner on next step
       - name: Build and push the image to AWS ECR
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
+          cache-from: type=gha # gha -> github cache
+          cache-to: type=gha,mode=max
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:test
 
@@ -76,6 +83,15 @@ jobs:
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
 
+      - name: Build and push the image to AWS ECR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          cache-from: type=gha # gha -> github cache
+          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.sha }}
+
+      #the code below is an example of how to do manually
       # - name: Build and push the image to AWS ECR
       #   id: build-push-image
       #   env:
@@ -85,10 +101,3 @@ jobs:
       #   run: |
       #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./
       #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-      - name: Build and push the image to AWS ECR
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.sha }}
