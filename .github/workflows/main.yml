@@ -1,12 +1,9 @@
-
-name: widget-server pipe
+name: widget-server pipe ECR
 
 on: 
   push:
     branches: ["main"]
 
-env:
-  CONTAINER_REPOSITORY: 'post-degree/module-01/docker/widget-server'
 jobs:
   build:
     name: Build
