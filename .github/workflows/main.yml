@@ -1,39 +1,39 @@
 name: widget-server pipe ECR
 
-on: 
+on:
   push:
-    branches: ["main"]
+    branches:
+      - 'main'
 
 jobs:
-  build:
+  Build:
     name: Build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
-      
-      - name: Setup Node
-        id: setup-node
-        uses: actions/setup-node@v6
+
+      - name: Configure Node
+        id: configure-node
+        uses: actions/setup-node@v4
         with:
           node-version: 20
-
+      
       - name: Install pnpm
-        id: install0-pnpm
+        id: install-pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 8
-        
+
       - name: Install dependencies
         id: install-dependencies
         run: |
-          pnpm install
+          pnpm Install
 
       - name: Configure AWS Credentials
         id: configure-aws-credentials
-        uses: aws-actions/configure-aws-credentials@v5.1.1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -45,59 +45,56 @@ jobs:
 
       - name: Set up Docker Buildx
         id: set-up-docker-buildx
-        uses: docker/setup-buildx-action@v3        
+        uses: docker/setup-buildx-action@v3
 
       - name: Generate tag
         id: generate-tag
-        # GITHUB_SHA -> environment variable default on github action to receive the hash commit who exec the action
-        # | -> get the hash and pass to another function
-        # head -c7 -> get the first 7 characters
-        # SHA -> variable created to receive the value from "(echo $GITHUB_SHA | head -c7)" operation
-        # GITHUB_OUTPUT -> variable to retrieve with step's output
-        # echo -> create key value data
-        # echo -> get the data from (sha=SHA) and send to GITHUB_OUTPUT
         run: |
           SHA=$(echo $GITHUB_SHA | head -c7)
           echo "sha=$SHA" >> $GITHUB_OUTPUT
 
-
-        # This step is only to build the image to use the scanner on next step
-      - name: Build and push the image to AWS ECR
+      - name: Build and export image
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
-          cache-from: type=gha # gha -> github cache
+          cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:test
+            ${{steps.login-ecr.outputs.registry}}/${{ vars.ECR_REPOSITORY }}:test
 
       - name: Run Trivy scanner
         id: run-trivy-scanner
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@0.33.1
         with:
-          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:test
+          image-ref: '${{steps.login-ecr.outputs.registry}}/${{ vars.ECR_REPOSITORY }}:test'
           format: 'table'
-          # exit-code: '1'
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH,MEDIUM,LOW'
-
+      
       - name: Build and push the image to AWS ECR
+        id: build-and-push-the-image-to-aws-ecr
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          cache-from: type=gha # gha -> github cache
-          tags: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.sha }}
+          cache-from: type=gha
+          tags: |
+            ${{steps.login-ecr.outputs.registry}}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.sha }}
 
-      #the code below is an example of how to do manually
-      # - name: Build and push the image to AWS ECR
-      #   id: build-push-image
-      #   env:
-      #     ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      #     ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-      #     IMAGE_TAG: ${{ steps.generate-tag.outputs.sha }}
-      #   run: |
-      #     docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./
-      #     docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Deploy to App Runner
+        id: deploy-app-runner
+        uses: awslabs/amazon-app-runner-deploy@main
+        with:
+          service: ${{ vars.APP_RUNNER_SERVICE_NAME }}
+          image: ${{steps.login-ecr.outputs.registry}}/${{ vars.ECR_REPOSITORY }}:${{ steps.generate-tag.outputs.sha }}
+          region: ${{ vars.AWS_REGION }}
+          access-role-arn: ${{ secrets.ROLE_ARN }}
+          cpu: 1
+          memory: 2
+          port: 3333
+          wait-for-service-stability-seconds: 180
+
+      - name: App Runner Check
+        run: echo "App running... ${{ steps.deploy-app-runner.outputs.service-url }}"

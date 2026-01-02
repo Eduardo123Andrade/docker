@@ -62,7 +62,8 @@ EXPOSE 3333
 # with CMD we can infer something in command line 
 
 # this layer is write and read 
-CMD [ "dist/server.mjs" ]
+# CMD [ "dist/server.mjs" ]
+CMD [ "node", "dist/server.mjs" ]
 
 # this isn't common usage
 # ENTRYPOINT [ "executable" ] ["node", "dist/server.mjs"]

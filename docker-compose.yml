@@ -1,0 +1,16 @@
+services:
+  app:
+    # The "image" will get the docker image from docker hub
+    # image: dockerhub_username/widget-server:latest
+    # build -> Will build the image from local Dockerfile
+    build: .
+    container_name: widget-server
+    ports:
+    # local_port:container_port
+      - 3000:3333
+    environment:
+      - CLOUDFLARE_ACCESS_KEY_ID=#
+      - CLOUDFLARE_SECRET_ACCESS_KEY=#
+      - CLOUDFLARE_BUCKET=#
+      - CLOUDFLARE_ACCOUNT_ID=#
+      - CLOUDFLARE_PUBLIC_URL=http://localhost.com
